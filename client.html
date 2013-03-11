@@ -1,0 +1,311 @@
+<body>
+<div id='stage'></div>
+<div>
+<div>Rules</div>
+</div>
+</body>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/kineticjs/4.3.1/kinetic.min.js"></script>
+<script>
+var num_groups = 5;
+var card_groups = [];
+var card_group_rects = [];
+var group_text = [];
+var card_images = []; //All of the card rects
+var select = null; //The rect of the selected image
+var select_id = -1; //The id of the selected image
+for (var i = 0; i < num_groups; i+=1)
+{
+    card_groups.push([]);
+}
+</script>
+<script>
+var can_width = 800;
+var can_height = 600;
+var stage = new Kinetic.Stage({
+    container: 'stage',
+    width: can_width,
+    height: can_height
+});
+var select_layer = new Kinetic.Layer();
+var select_rect = new Kinetic.Rect({
+        x: 0,
+        y: 0,
+        width: 65,
+        height: 80,
+        stroke: '#0AF',
+        strokeWidth: 4
+        });
+select_rect.hide();
+select_layer.add(select_rect);
+stage.add(select_layer);
+
+var submit_layer = new Kinetic.Layer();
+var submit_rect = new Kinetic.Rect({
+    x: 50,
+    y: 50,
+    width: 150,
+    height: 50,
+    fill: '#0F6',
+});
+var submit_text = new Kinetic.Text({
+    x: submit_rect.getX()+submit_rect.getWidth() / 2,
+    y: submit_rect.getY()+submit_rect.getHeight() / 2,
+    text: "Submit Hand",
+    fontSize: 20,
+    fontFamily: 'Ariel',
+    fill: "#000",
+});
+submit_text.setOffset({
+    x: submit_text.getWidth() / 2,
+    y: submit_text.getHeight() / 2
+});
+submit_layer.add(submit_rect);
+submit_layer.add(submit_text);
+stage.add(submit_layer);
+function create_card(num, id, x1, y1)
+{
+    var x_off = 5;
+    var y_off = 0;
+    var layer = new Kinetic.Layer();
+    var group = new Kinetic.Group();
+    var rect = new Kinetic.Rect({
+        x: x1,
+        y: y1,
+        width: 65,
+        height: 80,
+        fill: 'white',
+        stroke: 'black',
+        strokeWidth: 2
+    });
+    var text_str1=num, 
+        text_str2='';
+    if (num == 1) { text_str1='A'; text_str2='ssassin'; }
+    if (num == 10) { text_str1='J'; text_str2='oker'; }
+    if (num == 11) { text_str1='K'; text_str2='ing'; }
+    var text1 = new Kinetic.Text({
+        x: x1+x_off,
+        y: y1+y_off,
+        text: text_str1,
+        fontSize: 20,
+        fontFamily: 'Ariel',
+        fill: 'black'
+    });
+    var text2 = new Kinetic.Text({
+        x: x1+x_off+text1.getWidth(),
+        y: y1+y_off,
+        text: text_str2,
+        fontSize: 12,
+        fontFamily: 'Ariel',
+        fill: 'black'
+    }); 
+    group.add(rect);
+    group.add(text1);
+    group.add(text2);
+    group.on('click', function(evt) {
+        select = this;
+        select_id = id;
+        var x = this.getChildren()[0].getAbsolutePosition().x;
+        var y = this.getChildren()[0].getAbsolutePosition().y;
+        select_rect.setPosition(x, y); 
+        select_rect.show();
+
+        select_layer.draw();
+        stage.draw(); 
+    });
+    layer.add(group);
+    return layer;
+}
+function move_card(id, x, y, redraw)
+{
+    var x1 = x - 
+        card_images[id].getChildren()[0].getChildren()[0].getX();
+    var y1 = y -
+         card_images[id].getChildren()[0].getChildren()[0].getY();       
+    card_images[id].setAbsolutePosition(x1, y1);
+    if (redraw)
+    {
+        stage.draw()
+    }
+}
+function draw_hand()
+{
+    card_images = [];
+    var width = 70;
+    var height = 100;
+    var per_row = 8;
+    var stagger = 35;
+    var start_width = 100;
+    var start_height = can_height - (hand.length / per_row)*height;
+    for (var i = 0; i < hand.length; i++)
+    {
+        var card = create_card(hand[i], i, 
+            start_width + 
+                width*(i%per_row)+((Math.floor(i/per_row) % 2) * stagger),
+            start_height + height*Math.floor(i/per_row));
+        card_images.push(card);
+        stage.add(card);
+    } 
+}
+function draw_group(id)
+{
+    var x = 100*id+125;
+    var y = 150;
+    var width = 75;
+    var layer = new Kinetic.Layer();
+    var rect = new Kinetic.Rect({
+        x: x,
+        y: y,
+        width: 75,
+        height: 50,
+        fill: 'white',
+        stroke: 'black',
+        strokeWidth: 2
+    });
+    rect.on('click', function(evt) {
+        if (select_id >= 0)
+        {
+            add_to_group(id, select_id);
+            select = null;
+            select_id = -1;
+            select_rect.hide();
+        }
+    });
+    var text = new Kinetic.Text({
+        x: x+width/2-5,
+        y: y-30,
+        text: '0',
+        fontSize: 20,
+        fontFamily: 'Ariel',
+        fill: 'black'
+    });
+    text.setOffset({
+        x: text.getWidth(),
+    });
+
+    layer.add(rect);
+    layer.add(text);
+    group_text.push(text);
+    card_group_rects.push(rect);
+    stage.add(layer);
+}
+
+function draw_groups()
+{
+    
+    for (var i=0; i<num_groups; i+=1)
+    {
+        draw_group(i);
+    }
+}
+
+function add_to_group(group, card_id)
+{
+    for (var j=0; j<num_groups; j+=1)
+    {
+        for (var i=0; i<=card_groups[j].length; i+=1)
+        {
+            if (card_groups[j][i] == card_id) 
+            {
+                console.log("spliced");
+                card_groups[j].splice(j, 1); 
+            }
+        }
+    }
+    card_groups[group].push(card_id);
+    draw_group_cards();
+}
+
+function draw_group_cards()
+{
+    for (var i=0; i<num_groups; i+=1)
+    {
+        var x=card_group_rects[i].getX();
+        var y=card_group_rects[i].getY();
+        var value = 0;
+        for (var j=0; j<card_groups[i].length; j+=1)
+        {
+            move_card(card_groups[i][j], x+5, y+50+j*25, false);
+            var card_value = hand[card_groups[i][j]];
+            if (value != 'King' || value != 'Assassin')
+            {
+                if (card_value == 10) { value += 0; }
+                else if (card_value == 1) { value = 'Assassin'; }
+                else if (card_value == 11) { value = 'King'; }
+                else { value += card_value; }
+            }
+        }
+        group_text[i].setText(value);
+        stage.draw(); 
+    }
+}
+function get_hand(hand_data)
+{
+    hand = [];
+    console.log(hand_data);
+    for (var i = 0; i < hand_data.length; i++)
+    {
+        hand.push(hand_data[i]);
+    }
+    draw_hand();
+}
+function free_start()
+{
+    card_groups = [];
+    for (var i = 0; i < num_groups; i+=1)
+    {
+        card_groups.push([]);
+    }
+    for (var i = 0; i < group_text.length; i+=1)
+    {
+        group_text[i].remove();
+    }
+    for (var i = 0; i < card_group_rects.length; i+=1)
+    {
+        card_group_rects[i].remove();
+    }
+    for (var i = 0; i < card_images.length; i+=1)
+    {
+        card_images[i].remove();
+    }
+    group_text = [];
+    card_group_rects = [];
+    card_images = [];
+    select = null; //The rect of the selected image
+    select_id = -1; //The id of the selected image
+}
+function game_start(hand_data)
+{
+    free_start();
+    draw_groups();
+    get_hand(hand_data);
+    console.log(group_text)
+}
+function start_select()
+{
+    free_start();
+}
+</script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    var socket = io.connect('http://localhost');
+    socket.on('start', function(data) {
+        game_start(data['hand']);
+    });
+    socket.on('get_hand', function(data) {
+        get_hand(data['hand']) 
+    });
+    socket.on('select_start', function(data) {
+        console.log(data);
+        start_select();
+    });
+    
+    function send_hand()
+    {
+        console.log(card_groups);
+        socket.emit('hand_ordered', card_groups);
+    }
+    submit_text.on('click', function() {
+        send_hand();
+    });
+</script>
