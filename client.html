@@ -2,6 +2,14 @@
 <div id='stage'></div>
 <div>
 <div>Rules</div>
+<div>Create 5 stacks of cards, the sum of the face values will be compared against your opponents stack sizes</div>
+<div>After you have created your stackes, you will select which stack you want to challenge vs your opponents.</div>
+<div>If you won the previous round, then you must select your stack first</div>
+<div>Who ever wins 3 rounds wins the match</div><br />
+<div>Special Cards</div>
+<div>King: The king will win vs any stack EXCEPT for the assassin</div>
+<div>Assassin: The Assassin will lose against any stack EXCEPT for a stack with the king in it, then it will automatically win</div>
+<div>Joker: Any stack with the joker in it will swap your stack with the opponents, If both you and your opponent have jokers in the challenging stacks, then you will swap twice resulting in your original stacks</div>
 </div>
 </body>
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
@@ -10,10 +18,15 @@
 var num_groups = 5;
 var card_groups = [];
 var card_group_rects = [];
+var group_results = [];
+var select_result = null;
 var group_text = [];
 var card_images = []; //All of the card rects
 var select = null; //The rect of the selected image
 var select_id = -1; //The id of the selected image
+var select_phase = false;
+var selected_stack = -1; //Used to show that the opponent selected this stack
+var selected_stack_rect = null;
 for (var i = 0; i < num_groups; i+=1)
 {
     card_groups.push([]);
@@ -42,8 +55,8 @@ stage.add(select_layer);
 
 var submit_layer = new Kinetic.Layer();
 var submit_rect = new Kinetic.Rect({
-    x: 50,
-    y: 50,
+    x: 300,
+    y: 0,
     width: 150,
     height: 50,
     fill: '#0F6',
@@ -147,10 +160,39 @@ function draw_hand()
         stage.add(card);
     } 
 }
-function draw_group(id)
+function change_group_text(str, id)
+{
+    group_text[id].setText(str);
+    group_text[id].setOffset({
+        x: group_text[id].getWidth()/2,
+        y: group_text[id].getHeight()
+    });
+
+}
+
+function select_group(id)
+{
+    if (select_phase)
+    {
+        if (id < num_groups)
+            send_select(id);
+    }
+    else
+    {
+        if (select_id >= 0)
+        {
+            add_to_group(id, select_id);
+            select = null;
+            select_id = -1;
+            select_rect.hide();
+        }
+    }
+}
+
+function draw_group(id, y_off, id_off)
 {
     var x = 100*id+125;
-    var y = 150;
+    var y = 150+y_off;
     var width = 75;
     var layer = new Kinetic.Layer();
     var rect = new Kinetic.Rect({
@@ -163,19 +205,13 @@ function draw_group(id)
         strokeWidth: 2
     });
     rect.on('click', function(evt) {
-        if (select_id >= 0)
-        {
-            add_to_group(id, select_id);
-            select = null;
-            select_id = -1;
-            select_rect.hide();
-        }
+        select_group(id+id_off); 
     });
     var text = new Kinetic.Text({
-        x: x+width/2-5,
-        y: y-30,
+        x: x+rect.getWidth()/2+5,
+        y: y-3,
         text: '0',
-        fontSize: 20,
+        fontSize: 18,
         fontFamily: 'Ariel',
         fill: 'black'
     });
@@ -190,12 +226,11 @@ function draw_group(id)
     stage.add(layer);
 }
 
-function draw_groups()
+function draw_groups(y_off, id_off)
 {
-    
     for (var i=0; i<num_groups; i+=1)
     {
-        draw_group(i);
+        draw_group(i, y_off, id_off);
     }
 }
 
@@ -235,7 +270,7 @@ function draw_group_cards()
                 else { value += card_value; }
             }
         }
-        group_text[i].setText(value);
+        change_group_text(value, i);
         stage.draw(); 
     }
 }
@@ -273,17 +308,147 @@ function free_start()
     card_images = [];
     select = null; //The rect of the selected image
     select_id = -1; //The id of the selected image
+    stage.draw();
+}
+function test_select()
+//Assign cards to groups real quick
+{
+    for (var i=0; i<=14; i+=1)
+    {
+        add_to_group(Math.floor(i/3), i);
+    }
+    send_hand();
 }
 function game_start(hand_data)
 {
+    select_phase = false;
     free_start();
-    draw_groups();
+    draw_groups(0, 0);
     get_hand(hand_data);
     console.log(group_text)
+    //test_select();
 }
-function start_select()
+function start_select(data)
 {
+    select_phase = true;
     free_start();
+    draw_groups(250, 0);
+    draw_groups(-50, num_groups);
+    for (var i=0; i < num_groups; i+=1)
+    {
+        var val = data.hand[i].value;
+        var txt = "";
+        if (data.hand[i].swap) { txt = "swap\n"; }
+        if (val == -1) { txt += "Assassin"; }
+        else if (val == -2) { txt += "King"; }
+        else { txt += val; }
+        change_group_text(txt, i);
+        change_group_text("Size:" + data.opp_hand[i], i+num_groups);
+    }
+    stage.draw();
+    console.log("Select Started"); 
+}
+function show_op_selected(data)
+{
+    console.log("Showing");
+    console.log(data);
+    if (data >= 0)
+    {
+        if (selected_stack_rect != null)
+        {
+            selected_stack_rect.remove()
+        }
+        var rect = new Kinetic.Circle({
+            x: card_group_rects[data+num_groups].getX()+30,
+            y: card_group_rects[data+num_groups].getY()+20,
+            radius: 5,
+            fill: '#0AF',
+            stroke: 'black',
+            strokeWidth: 2
+        });
+        selected_stack_rect = new Kinetic.Layer();
+        selected_stack_rect.add(rect);
+        stage.add(selected_stack_rect);
+        stage.draw();
+    }
+}
+function update_round(data)
+{
+    console.log(data);
+    if (selected_stack_rect != null)
+    {
+        selected_stack_rect.remove()
+    }
+    var text;
+    var text2;
+    var x1 = card_group_rects[data.my_select].getX();
+    var y1 = card_group_rects[data.my_select].getY();
+    var x2 = card_group_rects[data.op_select+num_groups].getX();
+    var y2 = card_group_rects[data.op_select+num_groups].getY();
+    var wx, wy, lx, ly;
+    var size = 40;
+    if (data.won)
+    {
+        wx = x1+20;
+        wy = y1;
+        lx = x2+20;
+        ly = y2;
+    }
+    else
+    {
+        wx = x2+20;
+        wy = y2;
+        lx = x1+20;
+        ly = y1;
+    }
+    text = new Kinetic.Text({
+            x: wx,
+            y: wy,
+            text: 'O',
+            fontSize: size,
+            fontFamily: 'Ariel',
+            fill: 'green'
+        });
+    text2 = new Kinetic.Text({
+            x: lx,
+            y: ly,
+            text: 'X',
+            fontSize: size,
+            fontFamily: 'Ariel',
+            fill: 'red'
+        });
+    if (select_result != null)
+    {
+        select_result.remove()
+    }
+    select_result = new Kinetic.Layer();
+    if (data.my == -1) { data.my = 'Assassin'; }
+    if (data.my == -2) { data.my = 'King'; }
+    if (data.op == -1) { data.op = 'Assassin'; }
+    if (data.op == -2) { data.op = 'King'; }
+
+    var res_text_str = "You: " + data.my + " vs Opponent: " + data.op;
+    if (data.swap1 != data.swap2)
+    {
+        res_text_str += "\nSwapped!";
+    }
+    var res_text = new Kinetic.Text({
+        x: 250,
+        y: 270,
+        text: res_text_str,
+        fontSize: 30,
+        fontFamily: 'Ariel',
+        fill: 'black'
+    });
+    select_result.add(res_text);
+    group_results.push(text);
+    group_results.push(text2);
+    var layer = new Kinetic.Layer();
+    layer.add(text);
+    layer.add(text2);
+    stage.add(layer);
+    stage.add(select_result);
+    stage.draw();
 }
 </script>
 <script src="/socket.io/socket.io.js"></script>
@@ -297,8 +462,27 @@ function start_select()
     });
     socket.on('select_start', function(data) {
         console.log(data);
-        start_select();
+        start_select(data);
     });
+    socket.on('round_state', function(data) {
+        update_round(data);
+    });
+    socket.on('game_state', function(data) {
+        alert(data);
+    });
+    socket.on('error', function(data) {
+        alert(data.msg);
+    });
+    socket.on('stack_select', function(data) {
+        show_op_selected(data);
+    });
+
+    
+    function send_select(selected)
+    {
+        console.log(selected);
+        socket.emit("select_stack", selected);
+    }
     
     function send_hand()
     {
