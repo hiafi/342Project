@@ -15,6 +15,7 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/kineticjs/4.3.1/kinetic.min.js"></script>
 <script>
+var server_addr = "ec2-50-112-59-79.us-west-2.compute.amazonaws.com:8000";
 var num_groups = 5;
 var card_groups = [];
 var card_group_rects = [];
@@ -303,6 +304,14 @@ function free_start()
     {
         card_images[i].remove();
     }
+    for (var i = 0; i < group_results.length; i+=1)
+    {
+	group_results[i].remove();
+    }
+    if (select_result != null)
+    {
+	select_result.remove();
+    }
     group_text = [];
     card_group_rects = [];
     card_images = [];
@@ -453,7 +462,7 @@ function update_round(data)
 </script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-    var socket = io.connect('http://localhost');
+    var socket = io.connect(server_addr);
     socket.on('start', function(data) {
         game_start(data['hand']);
     });
@@ -483,9 +492,9 @@ function update_round(data)
         console.log(selected);
         socket.emit("select_stack", selected);
     }
-    
+
     function send_hand()
-    {
+    {    
         console.log(card_groups);
         socket.emit('hand_ordered', card_groups);
     }

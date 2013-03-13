@@ -98,21 +98,24 @@ function recv_hand(player, data)
 {
     try
     {
-        player.stacks = [];
-        console.log(data);
-        for (var i=0; i < stacks; i+=1)
-        {
-            player.stacks.push({ 'value':0, 'swap':false, 
-                                'cards':[], 'select':false });
-            
-            for (var j=0; j < data[i].length; j+=1)
-            {
-                player.stacks[i].cards.push(player.hand[data[i][j]]); 
-            }
-            count_hand(player, i);
-        }
-        player.ready = true;
-        console.log(player.stacks);
+	if (player.ready == false)
+	{
+		player.stacks = [];
+		console.log(data);
+		for (var i=0; i < stacks; i+=1)
+		{
+		    player.stacks.push({ 'value':0, 'swap':false, 
+					'cards':[], 'select':false });
+		    
+		    for (var j=0; j < data[i].length; j+=1)
+		    {
+			player.stacks[i].cards.push(player.hand[data[i][j]]); 
+		    }
+		    count_hand(player, i);
+		}
+		player.ready = true;
+		console.log(player.stacks);
+	}
     }
     catch (err)
     {
@@ -131,6 +134,11 @@ function calc_winner(value1, value2)
     {
         if (value2 == -1) { return false; }
         else { return true; }
+    }
+    if (value2 == -2)
+    {
+	if (value2 == -1) { return true; }
+	else { return false; }
     }
     if (value1 >= value2) { return true; }
     else { return false; }
@@ -151,11 +159,13 @@ function recv_select(player, data)
     if (game_state.player1.selected != -1 &&
         game_state.player2.selected != -1)
     {
-        console.log(game_state.player1.selected + " " +
-                    game_state.player2.selected);
+        console.log(game_state.player1.selected)
+        console.log(game_state.player2.selected);
         var value1, value2;
         value1 = game_state.player1.stacks[game_state.player1.selected].value;
         value2 = game_state.player2.stacks[game_state.player2.selected].value;
+	console.log(value1);
+	console.log(value2);
         var temp;
         var swap1 =game_state.player1.stacks[game_state.player1.selected].swap;
         var swap2 =game_state.player2.stacks[game_state.player2.selected].swap;
